@@ -12,12 +12,15 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from psclaude._detect import detect
+from psclaude._marketplace import Marketplace
 from psclaude._models import (
     FileEntry,
     OutputMode,
+    SetupReport,
     StructuredResponse,
     TextResponse,
 )
+from psclaude._plugins import install_plugins
 
 _T = TypeVar("_T")
 
@@ -65,6 +68,15 @@ class PsClaude:
             ``.claude/skills/`` directory.
         claude_md: Path to a CLAUDE.md file. Copied to the workspace root.
         plugin_dirs: Paths to plugin directories. Passed via ``--plugin-dir``.
+        marketplaces: Remote marketplace sources to register. Each is a GitHub
+            ``owner/repo``, local path, git URL, or a dict with a ``source``
+            key for structured sources.
+        marketplace: A :class:`Marketplace` definition to write into the
+            workspace. Its plugins are automatically installed. Use this
+            to define plugin sources inline without a pre-existing marketplace.
+        install: Extra plugin identifiers to install from any registered
+            marketplace, e.g. ``"review-plugin@my-marketplace"``. Installed
+            with ``--scope project`` so they live inside the workspace.
         input_dir: Default directory Claude can read from. Symlinked into the
             workspace as ``input/``. Can be overridden per-send.
         model: Model override (e.g. ``"sonnet"`` or ``"claude-sonnet-4-6"``).
@@ -83,6 +95,9 @@ class PsClaude:
         skills: Sequence[str | Path] = (),
         claude_md: str | Path | None = None,
         plugin_dirs: Sequence[str | Path] = (),
+        marketplaces: Sequence[str | dict] = (),
+        marketplace: Marketplace | None = None,
+        install: Sequence[str] = (),
         input_dir: str | Path | None = None,
         model: str | None = None,
         max_tokens: int | None = None,
@@ -101,6 +116,7 @@ class PsClaude:
         self._max_tokens = max_tokens
         self._timeout = timeout
         self._plugin_dirs = [Path(p).resolve() for p in plugin_dirs]
+        self._marketplace = marketplace
 
         # Permission / tool defaults for structured mode
         if output_mode == OutputMode.STRUCTURED:
@@ -117,6 +133,18 @@ class PsClaude:
         # Build workspace
         self._workspace = Path(tempfile.mkdtemp(prefix="claude_"))
         self._setup_workspace(skills, claude_md)
+
+        # Install marketplace plugins
+        self._setup_report: SetupReport | None = None
+        if marketplaces or marketplace or install:
+            self._setup_report = install_plugins(
+                self._claude_path,
+                self._workspace,
+                marketplaces=marketplaces,
+                local_marketplace=marketplace,
+                plugins=install,
+                timeout=timeout,
+            )
 
         # Symlink default input dir if provided
         if self._default_input_dir is not None:
@@ -145,6 +173,32 @@ class PsClaude:
     def output_mode(self) -> OutputMode:
         return self._output_mode
 
+    @property
+    def setup_report(self) -> SetupReport | None:
+        """Result of marketplace/plugin installation, or None if none were requested."""
+        return self._setup_report
+
+    def require_setup(self) -> SetupReport:
+        """Assert that marketplace/plugin setup succeeded.
+
+        Returns the :class:`SetupReport` on success.
+
+        Raises:
+            RuntimeError: If no plugins were requested (nothing to verify),
+                or if any marketplace or plugin operation failed. The error
+                message includes the failing commands and their stderr.
+        """
+        if self._setup_report is None:
+            raise RuntimeError("No marketplaces or plugins were requested.")
+        if self._setup_report.ok:
+            return self._setup_report
+        lines = ["Plugin setup failed:"]
+        for r in self._setup_report.failed:
+            lines.append(f"  [{r.exit_code}] {r.command}")
+            if r.stderr:
+                lines.append(f"        {r.stderr}")
+        raise RuntimeError("\n".join(lines))
+
     # ------------------------------------------------------------------
     # Cleanup
     # ------------------------------------------------------------------
@@ -158,7 +212,6 @@ class PsClaude:
         """
         if self._workspace.exists():
             shutil.rmtree(self._workspace)
-
 
     # ------------------------------------------------------------------
     # Workspace setup
@@ -268,10 +321,12 @@ class PsClaude:
         if input_dir is not None:
             cmd.extend(["--add-dir", str(input_dir)])
             input_prefix = str(input_dir)
-            cmd.extend([
-                "--disallowedTools",
-                f"Edit({input_prefix}:*) Write({input_prefix}:*) Bash(rm:*{input_prefix}*)",
-            ])
+            cmd.extend(
+                [
+                    "--disallowedTools",
+                    f"Edit({input_prefix}:*) Write({input_prefix}:*) Bash(rm:*{input_prefix}*)",
+                ]
+            )
 
         return cmd
 
@@ -434,6 +489,9 @@ def run_claude(
     skills: Sequence[str | Path] = (),
     claude_md: str | Path | None = None,
     plugin_dirs: Sequence[str | Path] = (),
+    marketplaces: Sequence[str | dict] = (),
+    marketplace: Marketplace | None = None,
+    install: Sequence[str] = (),
     input_dir: str | Path | None = None,
     model: str | None = None,
     max_tokens: int | None = None,
@@ -454,6 +512,9 @@ def run_claude(
         skills=skills,
         claude_md=claude_md,
         plugin_dirs=plugin_dirs,
+        marketplaces=marketplaces,
+        marketplace=marketplace,
+        install=install,
         input_dir=input_dir,
         model=model,
         max_tokens=max_tokens,
