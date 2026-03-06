@@ -3,6 +3,7 @@
 from psclaude.__about__ import __version__
 from psclaude._client import PsClaude, run_claude
 from psclaude._detect import detect
+from psclaude._install import install_plugin
 from psclaude._marketplace import (
     GitHubSource,
     GitSubdirSource,
@@ -42,5 +43,6 @@ __all__ = [
     "StructuredResponse",
     "TextResponse",
     "detect",
+    "install_plugin",
     "run_claude",
 ]
