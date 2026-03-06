@@ -23,6 +23,7 @@ from psclaude._models import (
     StructuredResponse,
     TextResponse,
 )
+from psclaude._version import Version, bump, read_version, write_version
 
 __all__ = [
     "__version__",
@@ -42,7 +43,11 @@ __all__ = [
     "SetupReport",
     "StructuredResponse",
     "TextResponse",
+    "Version",
+    "bump",
     "detect",
     "install_plugin",
+    "read_version",
     "run_claude",
+    "write_version",
 ]
