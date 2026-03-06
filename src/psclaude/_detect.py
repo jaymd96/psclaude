@@ -39,8 +39,7 @@ def detect(*, force: bool = False) -> ClaudeInfo:
         _cached_info = ClaudeInfo(
             status=ClaudeStatus.NOT_INSTALLED,
             error=(
-                "Claude Code CLI not found. "
-                "Install with: npm install -g @anthropic-ai/claude-code"
+                "Claude Code CLI not found. Install with: npm install -g @anthropic-ai/claude-code"
             ),
         )
         return _cached_info

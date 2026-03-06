@@ -77,7 +77,10 @@ class TestInstallPlugins:
         assert len(report.marketplaces) == 1
         cmd = mock.call_args_list[0][0][0]
         assert cmd == [
-            "/usr/local/bin/claude", "plugin", "marketplace", "add",
+            "/usr/local/bin/claude",
+            "plugin",
+            "marketplace",
+            "add",
             "jaymd96/my-marketplace",
         ]
 
@@ -108,8 +111,12 @@ class TestInstallPlugins:
         assert len(report.plugins) == 1
         cmd = mock.call_args_list[0][0][0]
         assert cmd == [
-            "/usr/local/bin/claude", "plugin", "install",
-            "review-plugin@my-marketplace", "--scope", "project",
+            "/usr/local/bin/claude",
+            "plugin",
+            "install",
+            "review-plugin@my-marketplace",
+            "--scope",
+            "project",
         ]
 
     def test_runs_in_workspace_cwd(self, tmp_path: Path):
@@ -188,8 +195,10 @@ class TestPsClaudePluginIntegration:
         assert client.setup_report is None
 
     def test_marketplace_and_install(self):
-        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
-                patch("psclaude._client.install_plugins") as mock_install:
+        with (
+            patch("psclaude._client.detect", return_value=FAKE_INFO),
+            patch("psclaude._client.install_plugins") as mock_install,
+        ):
             mock_install.return_value = SetupReport(marketplaces=(), plugins=())
             client = PsClaude(
                 marketplaces=["jaymd96/tools"],
@@ -200,6 +209,7 @@ class TestPsClaudePluginIntegration:
             "/usr/local/bin/claude",
             client.workspace,
             marketplaces=["jaymd96/tools"],
+            local_marketplace=None,
             plugins=["review@tools"],
             timeout=120,
         )
@@ -211,8 +221,10 @@ class TestPsClaudePluginIntegration:
             plugins=(PluginResult("install", 0, "", ""),),
         )
 
-        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
-                patch("psclaude._client.install_plugins", return_value=fake_report):
+        with (
+            patch("psclaude._client.detect", return_value=FAKE_INFO),
+            patch("psclaude._client.install_plugins", return_value=fake_report),
+        ):
             client = PsClaude(
                 marketplaces=["mp"],
                 install=["p@mp"],
@@ -222,8 +234,10 @@ class TestPsClaudePluginIntegration:
         assert client.setup_report.ok
 
     def test_run_claude_forwards_plugin_args(self):
-        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
-                patch("psclaude._client.install_plugins") as mock_install:
+        with (
+            patch("psclaude._client.detect", return_value=FAKE_INFO),
+            patch("psclaude._client.install_plugins") as mock_install,
+        ):
             mock_install.return_value = SetupReport(marketplaces=(), plugins=())
 
             result = run_claude(
@@ -255,8 +269,10 @@ class TestRequireSetup:
             plugins=(PluginResult("install p", 0, "", ""),),
         )
 
-        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
-                patch("psclaude._client.install_plugins", return_value=fake_report):
+        with (
+            patch("psclaude._client.detect", return_value=FAKE_INFO),
+            patch("psclaude._client.install_plugins", return_value=fake_report),
+        ):
             client = PsClaude(marketplaces=["mp"], install=["p@mp"])
 
         report = client.require_setup()
@@ -268,8 +284,10 @@ class TestRequireSetup:
             plugins=(PluginResult("install bad-plugin", 1, "", "not found"),),
         )
 
-        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
-                patch("psclaude._client.install_plugins", return_value=fake_report):
+        with (
+            patch("psclaude._client.detect", return_value=FAKE_INFO),
+            patch("psclaude._client.install_plugins", return_value=fake_report),
+        ):
             client = PsClaude(marketplaces=["mp"], install=["bad-plugin@mp"])
 
         with pytest.raises(RuntimeError, match="Plugin setup failed") as exc_info:
@@ -285,8 +303,10 @@ class TestRequireSetup:
             plugins=(PluginResult("install p", 1, "", "no marketplace"),),
         )
 
-        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
-                patch("psclaude._client.install_plugins", return_value=fake_report):
+        with (
+            patch("psclaude._client.detect", return_value=FAKE_INFO),
+            patch("psclaude._client.install_plugins", return_value=fake_report),
+        ):
             client = PsClaude(marketplaces=["bad-mp"], install=["p@bad-mp"])
 
         with pytest.raises(RuntimeError) as exc_info:

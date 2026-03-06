@@ -13,6 +13,7 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
+from psclaude._marketplace import Marketplace
 from psclaude._models import PluginResult, SetupReport
 
 
@@ -21,6 +22,7 @@ def install_plugins(
     workspace: Path,
     *,
     marketplaces: Sequence[str | dict] = (),
+    local_marketplace: Marketplace | None = None,
     plugins: Sequence[str] = (),
     timeout: int = 120,
 ) -> SetupReport:
@@ -29,10 +31,15 @@ def install_plugins(
     Args:
         claude_path: Absolute path to the ``claude`` binary.
         workspace: Workspace directory (used as cwd and project scope root).
-        marketplaces: Marketplace sources to add. Each is either:
+        marketplaces: Remote marketplace sources to add. Each is either:
             - a string: GitHub ``owner/repo``, local path, or git URL
             - a dict with ``source`` key for structured sources (github, url, etc.)
-        plugins: Plugin identifiers to install, e.g. ``"review-plugin@my-marketplace"``.
+        local_marketplace: A :class:`Marketplace` definition to write into the
+            workspace and register. Its plugins are automatically installed —
+            no need to list them in *plugins* (though you can install additional
+            plugins from remote marketplaces there).
+        plugins: Extra plugin identifiers to install,
+            e.g. ``"review-plugin@my-marketplace"``.
         timeout: Subprocess timeout in seconds per command.
 
     Returns:
@@ -41,15 +48,21 @@ def install_plugins(
     mp_results: list[PluginResult] = []
     pl_results: list[PluginResult] = []
 
+    # Remote marketplaces
     for mp in marketplaces:
-        mp_results.append(
-            _add_marketplace(claude_path, workspace, mp, timeout=timeout)
-        )
+        mp_results.append(_add_marketplace(claude_path, workspace, mp, timeout=timeout))
 
+    # Local (inline) marketplace — write to disk, register, auto-install its plugins
+    if local_marketplace is not None:
+        local_marketplace.write_to(workspace)
+        mp_results.append(_add_marketplace(claude_path, workspace, ".", timeout=timeout))
+        for entry in local_marketplace.plugins:
+            identifier = f"{entry.name}@{local_marketplace.name}"
+            pl_results.append(_install_plugin(claude_path, workspace, identifier, timeout=timeout))
+
+    # Explicit plugin installs (from any registered marketplace)
     for plugin in plugins:
-        pl_results.append(
-            _install_plugin(claude_path, workspace, plugin, timeout=timeout)
-        )
+        pl_results.append(_install_plugin(claude_path, workspace, plugin, timeout=timeout))
 
     return SetupReport(
         marketplaces=tuple(mp_results),

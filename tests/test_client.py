@@ -210,19 +210,25 @@ class TestCommandBuilding:
 
 class TestSend:
     def test_text_mode_send(self, text_client: PsClaude):
-        fake_output = json.dumps([
-            {
-                "role": "assistant",
-                "content": [{"type": "text", "text": "Hello world"}],
-            },
-            {"cost_usd": 0.001, "input_tokens": 10, "output_tokens": 5, "duration_ms": 500},
-        ])
+        fake_output = json.dumps(
+            [
+                {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": "Hello world"}],
+                },
+                {"cost_usd": 0.001, "input_tokens": 10, "output_tokens": 5, "duration_ms": 500},
+            ]
+        )
 
-        fake_result = type("R", (), {
-            "stdout": fake_output,
-            "stderr": "",
-            "returncode": 0,
-        })()
+        fake_result = type(
+            "R",
+            (),
+            {
+                "stdout": fake_output,
+                "stderr": "",
+                "returncode": 0,
+            },
+        )()
 
         with patch("subprocess.run", return_value=fake_result):
             resp = text_client.send("hi")
@@ -237,18 +243,24 @@ class TestSend:
         (structured_client.output_dir / "main.py").write_text("print('hi')")
 
         manifest = {"files": [{"filename": "main.py", "description": "Entry point"}]}
-        fake_output = json.dumps([
-            {
-                "role": "assistant",
-                "content": [{"type": "text", "text": json.dumps(manifest)}],
-            },
-        ])
+        fake_output = json.dumps(
+            [
+                {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": json.dumps(manifest)}],
+                },
+            ]
+        )
 
-        fake_result = type("R", (), {
-            "stdout": fake_output,
-            "stderr": "",
-            "returncode": 0,
-        })()
+        fake_result = type(
+            "R",
+            (),
+            {
+                "stdout": fake_output,
+                "stderr": "",
+                "returncode": 0,
+            },
+        )()
 
         with patch("subprocess.run", return_value=fake_result):
             resp = structured_client.send("generate a script")
@@ -262,15 +274,23 @@ class TestSend:
         (structured_client.output_dir / "extra.txt").write_text("bonus")
 
         manifest = {"files": []}
-        fake_output = json.dumps([
+        fake_output = json.dumps(
+            [
+                {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": json.dumps(manifest)}],
+                },
+            ]
+        )
+        fake_result = type(
+            "R",
+            (),
             {
-                "role": "assistant",
-                "content": [{"type": "text", "text": json.dumps(manifest)}],
+                "stdout": fake_output,
+                "stderr": "",
+                "returncode": 0,
             },
-        ])
-        fake_result = type("R", (), {
-            "stdout": fake_output, "stderr": "", "returncode": 0,
-        })()
+        )()
 
         with patch("subprocess.run", return_value=fake_result):
             resp = structured_client.send("generate")
@@ -295,12 +315,20 @@ class TestSend:
         with patch("psclaude._client.detect", return_value=FAKE_INFO):
             client = PsClaude()
 
-        fake_output = json.dumps([
-            {"role": "assistant", "content": [{"type": "text", "text": "Got it"}]},
-        ])
-        fake_result = type("R", (), {
-            "stdout": fake_output, "stderr": "", "returncode": 0,
-        })()
+        fake_output = json.dumps(
+            [
+                {"role": "assistant", "content": [{"type": "text", "text": "Got it"}]},
+            ]
+        )
+        fake_result = type(
+            "R",
+            (),
+            {
+                "stdout": fake_output,
+                "stderr": "",
+                "returncode": 0,
+            },
+        )()
 
         with patch("subprocess.run", return_value=fake_result) as mock_run:
             client.send("read the inputs", input_dir=src)
@@ -326,12 +354,20 @@ class TestSend:
 
         assert (client.input_dir / "a.txt").exists()
 
-        fake_output = json.dumps([
-            {"role": "assistant", "content": "ok"},
-        ])
-        fake_result = type("R", (), {
-            "stdout": fake_output, "stderr": "", "returncode": 0,
-        })()
+        fake_output = json.dumps(
+            [
+                {"role": "assistant", "content": "ok"},
+            ]
+        )
+        fake_result = type(
+            "R",
+            (),
+            {
+                "stdout": fake_output,
+                "stderr": "",
+                "returncode": 0,
+            },
+        )()
 
         with patch("subprocess.run", return_value=fake_result):
             client.send("use b now", input_dir=dir_b)
@@ -420,8 +456,7 @@ class TestRunClaude:
             captured_ws = client.workspace
             raise ValueError("oops")
 
-        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
-                pytest.raises(ValueError):
+        with patch("psclaude._client.detect", return_value=FAKE_INFO), pytest.raises(ValueError):
             run_claude(boom)
 
         assert not captured_ws.exists()
