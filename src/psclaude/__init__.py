@@ -8,6 +8,8 @@ from psclaude._models import (
     ClaudeStatus,
     FileEntry,
     OutputMode,
+    PluginResult,
+    SetupReport,
     StructuredResponse,
     TextResponse,
 )
@@ -18,7 +20,9 @@ __all__ = [
     "ClaudeStatus",
     "FileEntry",
     "OutputMode",
+    "PluginResult",
     "PsClaude",
+    "SetupReport",
     "StructuredResponse",
     "TextResponse",
     "detect",

@@ -92,3 +92,33 @@ class StructuredResponse:
 
     def __iter__(self):
         return iter(self.files)
+
+
+@dataclass(frozen=True)
+class PluginResult:
+    """Result of a single plugin CLI operation."""
+
+    command: str
+    exit_code: int
+    stdout: str
+    stderr: str
+
+    @property
+    def ok(self) -> bool:
+        return self.exit_code == 0
+
+
+@dataclass(frozen=True)
+class SetupReport:
+    """Summary of marketplace and plugin installation during workspace setup."""
+
+    marketplaces: tuple[PluginResult, ...]
+    plugins: tuple[PluginResult, ...]
+
+    @property
+    def ok(self) -> bool:
+        return all(r.ok for r in self.marketplaces) and all(r.ok for r in self.plugins)
+
+    @property
+    def failed(self) -> tuple[PluginResult, ...]:
+        return tuple(r for r in (*self.marketplaces, *self.plugins) if not r.ok)

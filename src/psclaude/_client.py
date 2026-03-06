@@ -15,9 +15,11 @@ from psclaude._detect import detect
 from psclaude._models import (
     FileEntry,
     OutputMode,
+    SetupReport,
     StructuredResponse,
     TextResponse,
 )
+from psclaude._plugins import install_plugins
 
 _T = TypeVar("_T")
 
@@ -65,6 +67,12 @@ class PsClaude:
             ``.claude/skills/`` directory.
         claude_md: Path to a CLAUDE.md file. Copied to the workspace root.
         plugin_dirs: Paths to plugin directories. Passed via ``--plugin-dir``.
+        marketplaces: Marketplace sources to register. Each is a GitHub
+            ``owner/repo``, local path, git URL, or a dict with a ``source``
+            key for structured sources.
+        install: Plugin identifiers to install from registered marketplaces,
+            e.g. ``"review-plugin@my-marketplace"``. Installed with
+            ``--scope project`` so they live inside the workspace.
         input_dir: Default directory Claude can read from. Symlinked into the
             workspace as ``input/``. Can be overridden per-send.
         model: Model override (e.g. ``"sonnet"`` or ``"claude-sonnet-4-6"``).
@@ -83,6 +91,8 @@ class PsClaude:
         skills: Sequence[str | Path] = (),
         claude_md: str | Path | None = None,
         plugin_dirs: Sequence[str | Path] = (),
+        marketplaces: Sequence[str | dict] = (),
+        install: Sequence[str] = (),
         input_dir: str | Path | None = None,
         model: str | None = None,
         max_tokens: int | None = None,
@@ -118,6 +128,17 @@ class PsClaude:
         self._workspace = Path(tempfile.mkdtemp(prefix="claude_"))
         self._setup_workspace(skills, claude_md)
 
+        # Install marketplace plugins
+        self._setup_report: SetupReport | None = None
+        if marketplaces or install:
+            self._setup_report = install_plugins(
+                self._claude_path,
+                self._workspace,
+                marketplaces=marketplaces,
+                plugins=install,
+                timeout=timeout,
+            )
+
         # Symlink default input dir if provided
         if self._default_input_dir is not None:
             self._link_input_dir(self._default_input_dir)
@@ -144,6 +165,11 @@ class PsClaude:
     @property
     def output_mode(self) -> OutputMode:
         return self._output_mode
+
+    @property
+    def setup_report(self) -> SetupReport | None:
+        """Result of marketplace/plugin installation, or None if none were requested."""
+        return self._setup_report
 
     # ------------------------------------------------------------------
     # Cleanup
@@ -434,6 +460,8 @@ def run_claude(
     skills: Sequence[str | Path] = (),
     claude_md: str | Path | None = None,
     plugin_dirs: Sequence[str | Path] = (),
+    marketplaces: Sequence[str | dict] = (),
+    install: Sequence[str] = (),
     input_dir: str | Path | None = None,
     model: str | None = None,
     max_tokens: int | None = None,
@@ -454,6 +482,8 @@ def run_claude(
         skills=skills,
         claude_md=claude_md,
         plugin_dirs=plugin_dirs,
+        marketplaces=marketplaces,
+        install=install,
         input_dir=input_dir,
         model=model,
         max_tokens=max_tokens,
