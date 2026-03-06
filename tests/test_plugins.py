@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from psclaude import PluginResult, PsClaude, SetupReport, run_claude
 from psclaude._models import ClaudeInfo, ClaudeStatus
 from psclaude._plugins import install_plugins
@@ -232,3 +234,66 @@ class TestPsClaudePluginIntegration:
 
         mock_install.assert_called_once()
         assert result is not None
+
+
+# ------------------------------------------------------------------
+# require_setup
+# ------------------------------------------------------------------
+
+
+class TestRequireSetup:
+    def test_raises_when_no_plugins_requested(self):
+        with patch("psclaude._client.detect", return_value=FAKE_INFO):
+            client = PsClaude()
+
+        with pytest.raises(RuntimeError, match="No marketplaces or plugins were requested"):
+            client.require_setup()
+
+    def test_returns_report_on_success(self):
+        fake_report = SetupReport(
+            marketplaces=(PluginResult("add mp", 0, "", ""),),
+            plugins=(PluginResult("install p", 0, "", ""),),
+        )
+
+        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
+                patch("psclaude._client.install_plugins", return_value=fake_report):
+            client = PsClaude(marketplaces=["mp"], install=["p@mp"])
+
+        report = client.require_setup()
+        assert report is fake_report
+
+    def test_raises_with_details_on_failure(self):
+        fake_report = SetupReport(
+            marketplaces=(PluginResult("add mp", 0, "", ""),),
+            plugins=(PluginResult("install bad-plugin", 1, "", "not found"),),
+        )
+
+        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
+                patch("psclaude._client.install_plugins", return_value=fake_report):
+            client = PsClaude(marketplaces=["mp"], install=["bad-plugin@mp"])
+
+        with pytest.raises(RuntimeError, match="Plugin setup failed") as exc_info:
+            client.require_setup()
+
+        msg = str(exc_info.value)
+        assert "install bad-plugin" in msg
+        assert "not found" in msg
+
+    def test_raises_with_multiple_failures(self):
+        fake_report = SetupReport(
+            marketplaces=(PluginResult("add bad-mp", 1, "", "unreachable"),),
+            plugins=(PluginResult("install p", 1, "", "no marketplace"),),
+        )
+
+        with patch("psclaude._client.detect", return_value=FAKE_INFO), \
+                patch("psclaude._client.install_plugins", return_value=fake_report):
+            client = PsClaude(marketplaces=["bad-mp"], install=["p@bad-mp"])
+
+        with pytest.raises(RuntimeError) as exc_info:
+            client.require_setup()
+
+        msg = str(exc_info.value)
+        assert "add bad-mp" in msg
+        assert "unreachable" in msg
+        assert "install p" in msg
+        assert "no marketplace" in msg

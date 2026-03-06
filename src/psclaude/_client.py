@@ -171,6 +171,27 @@ class PsClaude:
         """Result of marketplace/plugin installation, or None if none were requested."""
         return self._setup_report
 
+    def require_setup(self) -> SetupReport:
+        """Assert that marketplace/plugin setup succeeded.
+
+        Returns the :class:`SetupReport` on success.
+
+        Raises:
+            RuntimeError: If no plugins were requested (nothing to verify),
+                or if any marketplace or plugin operation failed. The error
+                message includes the failing commands and their stderr.
+        """
+        if self._setup_report is None:
+            raise RuntimeError("No marketplaces or plugins were requested.")
+        if self._setup_report.ok:
+            return self._setup_report
+        lines = ["Plugin setup failed:"]
+        for r in self._setup_report.failed:
+            lines.append(f"  [{r.exit_code}] {r.command}")
+            if r.stderr:
+                lines.append(f"        {r.stderr}")
+        raise RuntimeError("\n".join(lines))
+
     # ------------------------------------------------------------------
     # Cleanup
     # ------------------------------------------------------------------
