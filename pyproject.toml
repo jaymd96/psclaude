@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jaymd96-psclaude"
+dynamic = ["version"]
+description = "Single-shot Claude Code CLI wrapper with workspace isolation"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "jaymd96" }]
+keywords = ["claude", "cli", "ai", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://github.com/jaymd96/psclaude"
+Source = "https://github.com/jaymd96/psclaude"
+Issues = "https://github.com/jaymd96/psclaude/issues"
+
+[tool.hatch.version]
+path = "src/psclaude/__about__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/psclaude"]
+
+[tool.hatch.envs.default]
+dependencies = ["pytest", "pytest-cov"]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest tests/ -v {args}"
+cov = "pytest tests/ --cov=psclaude --cov-report=term-missing {args}"
+
+[tool.hatch.envs.lint]
+dependencies = ["ruff"]
+
+[tool.hatch.envs.lint.scripts]
+check = "ruff check src/ tests/"
+fmt = "ruff format src/ tests/"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
