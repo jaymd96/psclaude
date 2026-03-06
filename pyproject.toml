@@ -32,6 +32,7 @@ path = "src/psclaude/__about__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/psclaude"]
+artifacts = ["_plugin/**"]
 
 [tool.hatch.envs.default]
 dependencies = ["pytest", "pytest-cov"]
